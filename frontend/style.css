@@ -16,7 +16,7 @@ main {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
     text-align: center;
     width: 90%;
-    /* Updated max-width to better fit the chart */
+  
     max-width: 650px; 
 }
 
@@ -65,12 +65,10 @@ p {
     display: none;
 }
 
-/* --- New Styles Start Here --- */
 
-/* Loading Spinner */
 .loader {
-    border: 5px solid #f3f3f3; /* Light grey */
-    border-top: 5px solid #007aff; /* Blue */
+    border: 5px solid #f3f3f3; 
+    border-top: 5px solid #007aff; 
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -83,7 +81,7 @@ p {
     100% { transform: rotate(360deg); }
 }
 
-/* Dashboard Elements */
+
 #dashboard-container {
     width: 100%;
     margin-top: 1.5rem;
@@ -102,9 +100,9 @@ p {
     margin: 1.5rem auto 0;
 }
 
-/* Updated result container */
+
 #result-container {
-    margin-top: 1.5rem; /* Give space above prediction */
+    margin-top: 1.5rem; 
     font-size: 1.1rem;
     font-weight: 600;
     min-height: 2rem;
@@ -118,7 +116,7 @@ p {
     color: #e76f51;
 }
 
-/* --- Add these new styles for the 7-day forecast --- */
+
 
 #forecast-container {
     margin-top: 2rem;

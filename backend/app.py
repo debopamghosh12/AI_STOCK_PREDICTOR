@@ -6,15 +6,15 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.models import load_model
 import os
-import datetime  # <-- IMPORT DATETIME
+import datetime  
 
-# --- Constants ---
+
 WINDOW_SIZE = 60
 HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
 TARGET_COLUMN_INDEX = 3
 
-# --- App Setup ---
+
 app = Flask(__name__)
 CORS(app)
 MODEL_DIR = "models"
@@ -76,7 +76,7 @@ def predict():
         if len(model_features) < WINDOW_SIZE:
              return jsonify({'error': 'Not enough historical data to predict.'}), 400
 
-        # --- NEW: Get the last known date from our data ---
+        
         last_known_date = model_features.index[-1].date()
         
         last_60_days = model_features.iloc[-WINDOW_SIZE:]
@@ -91,16 +91,16 @@ def predict():
         seven_day_forecast_prices = unscaled_prediction_array[:, TARGET_COLUMN_INDEX]
         seven_day_forecast_list = seven_day_forecast_prices.tolist()
 
-        # --- NEW: Calculate the next 7 trading days ---
+        
         forecast_dates = []
         current_date = last_known_date
         while len(forecast_dates) < HORIZON_SIZE:
             current_date += datetime.timedelta(days=1)
-            # 5 = Saturday, 6 = Sunday
+            
             if current_date.weekday() < 5: 
                 forecast_dates.append(current_date.strftime('%Y-%m-%d'))
         
-        # --- NEW: Combine dates and prices ---
+        
         forecast_with_dates = []
         for i in range(HORIZON_SIZE):
             forecast_with_dates.append({
@@ -112,7 +112,7 @@ def predict():
             'ticker': ticker_str,
             'companyName': company_name,
             'chartData': chart_data,
-            'sevenDayForecast': forecast_with_dates # <-- Send the new list of objects
+            'sevenDayForecast': forecast_with_dates 
         })
 
     except Exception as e:

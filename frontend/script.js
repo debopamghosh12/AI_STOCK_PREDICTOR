@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loader.classList.remove('hidden');
         dashboardContainer.classList.add('hidden');
         resultContainer.innerHTML = '';
-        forecastListEl.innerHTML = ''; // Clear old forecast list
+        forecastListEl.innerHTML = ''; 
 
         fetch('http://127.0.0.1:5000/api/predict', {
             method: 'POST',
@@ -44,12 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             companyNameEl.textContent = data.companyName;
             
-            // --- UPDATED: Read the new forecast object ---
+          
             data.sevenDayForecast.forEach((forecast, index) => {
                 const li = document.createElement('li');
                 
                 const daySpan = document.createElement('span');
-                // Create text like "Day 1 (2025-10-22):"
+                
                 daySpan.textContent = `Day ${index + 1} (${forecast.date}):`;
                 
                 const priceStrong = document.createElement('strong');
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 forecastListEl.appendChild(li);
             });
 
-            // Draw the Chart (no change here)
+           
             if (myStockChart) {
                 myStockChart.destroy();
             }
