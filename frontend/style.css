@@ -1,0 +1,164 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+main {
+    background-color: #ffffff;
+    padding: 2rem 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    width: 90%;
+    /* Updated max-width to better fit the chart */
+    max-width: 650px; 
+}
+
+h1 {
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+p {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 1.5rem;
+}
+
+.input-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#ticker-input {
+    flex-grow: 1;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+#predict-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: #007aff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#predict-button:hover {
+    background-color: #005bb5;
+}
+
+.hidden {
+    display: none;
+}
+
+/* --- New Styles Start Here --- */
+
+/* Loading Spinner */
+.loader {
+    border: 5px solid #f3f3f3; /* Light grey */
+    border-top: 5px solid #007aff; /* Blue */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Dashboard Elements */
+#dashboard-container {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+#company-name {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.chart-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 1.5rem auto 0;
+}
+
+/* Updated result container */
+#result-container {
+    margin-top: 1.5rem; /* Give space above prediction */
+    font-size: 1.1rem;
+    font-weight: 600;
+    min-height: 2rem;
+}
+
+.result-success {
+    color: #2a9d8f;
+}
+
+.result-error {
+    color: #e76f51;
+}
+
+/* --- Add these new styles for the 7-day forecast --- */
+
+#forecast-container {
+    margin-top: 2rem;
+    text-align: left;
+}
+
+#forecast-container h3 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+#forecast-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0 auto;
+    max-width: 300px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#forecast-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+}
+
+#forecast-list li:last-child {
+    border-bottom: none;
+}
+
+#forecast-list li span {
+    color: #555;
+    font-weight: 500;
+}
+
+#forecast-list li strong {
+    color: #007aff;
+    font-weight: 600;
+}

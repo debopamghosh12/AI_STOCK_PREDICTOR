@@ -1,0 +1,18 @@
+# Python virtual environment
+/backend/venv/
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# TensorFlow/Keras specific (optional but good practice)
+*.index
+*.data-00000-of-00001
+*.pb

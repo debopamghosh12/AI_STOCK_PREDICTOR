@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Predictor</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <main>
+        <h1>Stock Price Predictor</h1>
+        <p>Enter a supported US stock ticker (e.g., AAPL, JPM, TSLA)</p>
+
+        <div class="input-container">
+            <input type="text" id="ticker-input" placeholder="Enter Ticker Symbol">
+            <button id="predict-button">Predict</button>
+        </div>
+
+        <div id="loader" class="loader hidden"></div>
+
+        <div id="dashboard-container" class="hidden">
+            <h2 id="company-name"></h2>
+            
+            <div class="chart-container">
+                <canvas id="stock-chart"></canvas>
+            </div>
+
+            <div id="forecast-container">
+                <h3>7-Day Forecast (Close Price)</h3>
+                <ul id="forecast-list">
+                    </ul>
+            </div>
+            
+            <div id="result-container">
+                </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
