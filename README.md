@@ -12,8 +12,8 @@ This project showcases skills in:
 * **API Integration:** Fetching live data via `yfinance`.
 * **Version Control:** Using **Git LFS** to manage large model files.
 
-![Project Screenshot](frontend_screenshot.png)
-*(**Action:** Replace `frontend_screenshot.png` with your latest screenshot showing the 7-day forecast).*
+![Project Screenshot](image.png)
+
 
 ---
 
@@ -88,3 +88,4 @@ Git LFS will automatically download the large model files during the clone proce
 You can now use the application! Enter any of the 48 supported stock tickers (e.g., AAPL, TSLA, JPM, MSFT) to get a 7-day forecast.
 
 *(Note: The `train_model.py` script is included but takes over an hour to run. The necessary pre-trained models are already provided in the `backend/models` directory via Git LFS.)*
+
