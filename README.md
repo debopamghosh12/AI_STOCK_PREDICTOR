@@ -12,8 +12,8 @@ This project showcases skills in:
 * **API Integration:** Fetching live data via `yfinance`.
 * **Version Control:** Using **Git LFS** to manage large model files.
 
-![Project Screenshot](frontend_screenshot.png)
-*(**Action:** Replace `frontend_screenshot.png` with your latest screenshot showing the 7-day forecast).*
+![Project Screenshot](image.png)
+
 
 ---
 
@@ -35,56 +35,3 @@ This project showcases skills in:
 * **Core Concepts:** REST API, Deep Learning, Time Series Forecasting, Multivariate LSTM, Data Normalization, Git LFS
 
 ---
-
-## 🏁 How to Run This Project
-
-You need Python 3.10+ and Git LFS installed.
-
-### 1. Clone the Repository (with LFS)
-
-Make sure you have Git LFS installed ([git-lfs.com](https://git-lfs.com/)). Then clone:
-
-```bash
-git clone [https://github.com/YOUR_USERNAME/AI-Stock-Predictor.git](https://github.com/YOUR_USERNAME/AI-Stock-Predictor.git)
-cd AI-Stock-Predictor
-```
-Git LFS will automatically download the large model files during the clone process. This might take a few minutes.
-
-### 2. Run the Backend (API)
-
-1.  Navigate to the `backend` directory:
-    ```bash
-    cd backend
-    ```
-
-2.  Create and activate a Python virtual environment:
-    ```bash
-    # Create venv
-    python -m venv venv
-
-    # Activate (Windows)
-    .\venv\Scripts\activate
-    # Activate (macOS/Linux)
-    source venv/bin/activate
-    ```
-
-3.  Install the required libraries:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *(This will install TensorFlow and may take a while).*
-
-4.  Run the Flask server:
-    ```bash
-    python app.py
-    ```
-    The server will start on `http://127.0.0.1:5000`. It will load models as they are requested.
-
-### 3. Run the Frontend (Client)
-
-1.  Open the `frontend` directory in your file explorer.
-2.  Double-click the `index.html` file to open it in your web browser.
-
-You can now use the application! Enter any of the 48 supported stock tickers (e.g., AAPL, TSLA, JPM, MSFT) to get a 7-day forecast.
-
-*(Note: The `train_model.py` script is included but takes over an hour to run. The necessary pre-trained models are already provided in the `backend/models` directory via Git LFS.)*
