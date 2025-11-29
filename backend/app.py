@@ -7,6 +7,20 @@ import numpy as np
 from tensorflow.keras.models import load_model
 import os
 import datetime
+import requests
+
+# --- KEY FIX: Force a specific User-Agent globally ---
+# This tells Yahoo we are a specific Chrome browser, avoiding the "Bot" block.
+yf.pdr_override()
+
+# Monkey-patch the requests library to always send this header
+old_get = requests.get
+def new_get(*args, **kwargs):
+    headers = kwargs.get('headers', {})
+    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    kwargs['headers'] = headers
+    return old_get(*args, **kwargs)
+requests.get = new_get
 
 # --- Constants ---
 WINDOW_SIZE = 60
@@ -40,7 +54,7 @@ def get_model_and_scaler(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V7 - Simplified) is running!"
+    return "Stock Price Predictor API (V8 - User-Agent Patch) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -56,21 +70,27 @@ def predict():
         return jsonify({'error': f'No pre-trained model available for {ticker_str}.'}), 404
 
     try:
-        # --- FIX: Removed 'session=session'. Let yfinance handle it. ---
+        # Fetch data (The monkey-patch above handles the headers now)
         ticker_obj = yf.Ticker(ticker_str)
         
         company_name = ticker_obj.info.get('longName', ticker_str)
         
+        # Get 1 year of data
         hist_chart = ticker_obj.history(period='1y')
         if hist_chart.empty:
-            return jsonify({'error': 'No data for chart.'}), 404
-        
+            # If 1y fails, try fetching max and slicing
+            hist_chart = ticker_obj.history(period='2y')
+            if hist_chart.empty:
+                return jsonify({'error': 'Yahoo Finance blocked the request (Rate Limit). Please try again in 1 minute.'}), 429
+            hist_chart = hist_chart.iloc[-252:] # Approx 1 year
+
         hist_chart.reset_index(inplace=True)
         hist_chart['Date'] = hist_chart['Date'].dt.strftime('%Y-%m-%d')
         chart_data = {'dates': hist_chart['Date'].tolist(), 'prices': hist_chart['Close'].tolist()}
         
-        hist_pred = ticker_obj.history(period='100d')
-        model_features = hist_pred[FEATURES]
+        # Get data for prediction
+        # We reuse the data we just fetched if possible to save requests
+        model_features = hist_chart[FEATURES]
         
         if len(model_features) < WINDOW_SIZE:
              return jsonify({'error': 'Not enough historical data to predict.'}), 400
