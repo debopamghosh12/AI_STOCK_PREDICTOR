@@ -7,26 +7,8 @@ import numpy as np
 from tensorflow.keras.models import load_model
 import os
 import datetime
-import requests_cache
-from requests import Session
-from requests_cache import CacheMixin, SQLiteCache
-from requests_ratelimiter import LimiterMixin, MemoryQueueBucket
-from pyrate_limiter import Duration, RequestRate, Limiter
 
-# --- NEW: Advanced Caching & Rate Limiting Setup ---
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
-    pass
-
-session = CachedLimiterSession(
-    limiter=Limiter(RequestRate(2, Duration.SECOND*5)),  # Max 2 requests per 5 seconds
-    bucket_class=MemoryQueueBucket,
-    backend=SQLiteCache("yfinance.cache"),
-)
-
-# Trick Yahoo into thinking we are a standard browser
-session.headers['User-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-
-# --- Constants & App Setup (Same as before) ---
+# --- Constants ---
 WINDOW_SIZE = 60
 HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
@@ -37,9 +19,7 @@ CORS(app)
 MODEL_DIR = "models"
 loaded_models_cache = {}
 
-# ... [Keep your 'get_model_and_scaler' function exactly the same] ...
 def get_model_and_scaler(ticker):
-    # (Copy your existing code for this function here)
     if ticker in loaded_models_cache:
         return loaded_models_cache[ticker]
     
@@ -60,7 +40,7 @@ def get_model_and_scaler(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V6 - Anti-Rate-Limit) is running!"
+    return "Stock Price Predictor API (V7 - Simplified) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -76,11 +56,8 @@ def predict():
         return jsonify({'error': f'No pre-trained model available for {ticker_str}.'}), 404
 
     try:
-        # --- MODIFIED: Use the custom session here ---
-        ticker_obj = yf.Ticker(ticker_str, session=session)
-        
-        # Everything else below stays mostly the same, 
-        # but yfinance now uses our "fake browser" session automatically.
+        # --- FIX: Removed 'session=session'. Let yfinance handle it. ---
+        ticker_obj = yf.Ticker(ticker_str)
         
         company_name = ticker_obj.info.get('longName', ticker_str)
         
@@ -133,7 +110,6 @@ def predict():
         })
 
     except Exception as e:
-        # Print the REAL error to logs so we can see it
         print(f"FULL ERROR for {ticker_str}: {e}")
         return jsonify({'error': f'Backend Error: {str(e)}'}), 500
 
