@@ -7,8 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const companyNameEl = document.getElementById('company-name');
     const resultContainer = document.getElementById('result-container');
     const chartCtx = document.getElementById('stock-chart').getContext('2d');
-    
     const forecastListEl = document.getElementById('forecast-list');
+    
+    // --- NEW: Current Price Element ---
+    const currentPriceEl = document.getElementById('current-price');
 
     let myStockChart = null;
 
@@ -25,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultContainer.innerHTML = '';
         forecastListEl.innerHTML = ''; 
 
+        // USE YOUR RENDER URL HERE
         fetch('https://ai-stock-predictor-n85s.onrender.com/api/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,23 +47,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             companyNameEl.textContent = data.companyName;
             
-          
+            // --- NEW: Update Current Price ---
+            currentPriceEl.textContent = `$${data.currentPrice.toFixed(2)}`;
+            
             data.sevenDayForecast.forEach((forecast, index) => {
                 const li = document.createElement('li');
-                
                 const daySpan = document.createElement('span');
-                
                 daySpan.textContent = `Day ${index + 1} (${forecast.date}):`;
-                
                 const priceStrong = document.createElement('strong');
                 priceStrong.textContent = `$${forecast.price.toFixed(2)}`;
-                
                 li.appendChild(daySpan);
                 li.appendChild(priceStrong);
                 forecastListEl.appendChild(li);
             });
 
-           
             if (myStockChart) {
                 myStockChart.destroy();
             }
@@ -93,12 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
             loader.classList.add('hidden');
             dashboardContainer.classList.add('hidden');
-            
-            resultContainer.innerHTML = `
-                <p class="result-error">
-                    Error: ${error.message}
-                </p>
-            `;
+            resultContainer.innerHTML = `<p class="result-error">Error: ${error.message}</p>`;
         });
     });
 });

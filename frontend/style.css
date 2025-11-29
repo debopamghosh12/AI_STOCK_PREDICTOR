@@ -16,7 +16,6 @@ main {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
     text-align: center;
     width: 90%;
-  
     max-width: 650px; 
 }
 
@@ -65,7 +64,6 @@ p {
     display: none;
 }
 
-
 .loader {
     border: 5px solid #f3f3f3; 
     border-top: 5px solid #007aff; 
@@ -81,7 +79,6 @@ p {
     100% { transform: rotate(360deg); }
 }
 
-
 #dashboard-container {
     width: 100%;
     margin-top: 1.5rem;
@@ -94,12 +91,24 @@ p {
     margin: 0;
 }
 
+/* --- New Current Price Styles --- */
+#price-display {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #555;
+}
+
+#current-price {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 2rem;
+}
+
 .chart-container {
     width: 100%;
     max-width: 600px;
     margin: 1.5rem auto 0;
 }
-
 
 #result-container {
     margin-top: 1.5rem; 
@@ -108,15 +117,9 @@ p {
     min-height: 2rem;
 }
 
-.result-success {
-    color: #2a9d8f;
-}
-
 .result-error {
     color: #e76f51;
 }
-
-
 
 #forecast-container {
     margin-top: 2rem;

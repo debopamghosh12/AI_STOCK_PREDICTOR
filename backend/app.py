@@ -11,6 +11,7 @@ import requests
 import random
 
 # --- KEY FIX: Force a specific User-Agent globally ---
+# This monkey-patch prevents Yahoo Finance from blocking us as a "bot".
 old_get = requests.get
 def new_get(*args, **kwargs):
     headers = kwargs.get('headers', {})
@@ -25,6 +26,7 @@ HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
 TARGET_COLUMN_INDEX = 3
 
+# --- App Setup ---
 app = Flask(__name__)
 CORS(app)
 MODEL_DIR = "models"
@@ -49,54 +51,47 @@ def get_model_and_scaler(ticker):
         print(f"Error loading model for {ticker}: {e}")
         return None, None
 
-# --- NEW: Failover Logic ---
 def generate_dummy_data(ticker):
-    """Generates realistic-looking random data if Yahoo blocks us."""
+    """Generates realistic demo data if Yahoo blocks us."""
     print(f"⚠️ Yahoo blocked us. Generating demo data for {ticker}...")
     
-    # Create dates for the last year
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=365)
     dates_index = pd.date_range(start=start_date, end=end_date)
     dates = dates_index.strftime('%Y-%m-%d').tolist()
     
-    # Generate a random walk price
     prices = [150.0]
     for _ in range(len(dates)-1):
-        change = random.uniform(-2, 2.1) # Slight upward bias
+        change = random.uniform(-2, 2.1)
         new_price = max(10, prices[-1] + change)
         prices.append(new_price)
         
     chart_data = {'dates': dates, 'prices': prices}
     
-    # Generate a fake 7-day forecast
+    # --- NEW: Current Price for Demo Mode ---
+    current_price = round(prices[-1], 2)
+    
     forecast_with_dates = []
-    current_price = prices[-1]
-    current_date = end_date
+    curr = current_price
+    curr_date = end_date
     
     for i in range(HORIZON_SIZE):
-        current_date += datetime.timedelta(days=1)
-        if current_date.weekday() >= 5: # Skip weekend
-             current_date += datetime.timedelta(days=2)
-             
-        # Make a small random move
-        current_price += random.uniform(-1, 1)
-        
-        forecast_with_dates.append({
-            'date': current_date.strftime('%Y-%m-%d'),
-            'price': current_price
-        })
+        curr_date += datetime.timedelta(days=1)
+        if curr_date.weekday() >= 5: curr_date += datetime.timedelta(days=2)
+        curr += random.uniform(-1, 1)
+        forecast_with_dates.append({'date': curr_date.strftime('%Y-%m-%d'), 'price': curr})
         
     return {
         'ticker': ticker,
         'companyName': f"{ticker} (Demo Mode - Live Data Blocked)",
+        'currentPrice': current_price,
         'chartData': chart_data,
         'sevenDayForecast': forecast_with_dates
     }
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V10 - Graceful Failover) is running!"
+    return "Stock Price Predictor API (V11 - Current Price Added) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -107,32 +102,35 @@ def predict():
     
     ticker_str = ticker_str.upper()
     
-    # Check if model exists
     model, scaler = get_model_and_scaler(ticker_str)
     if model is None:
         return jsonify({'error': f'No pre-trained model available for {ticker_str}.'}), 404
 
     try:
-        # --- ATTEMPT 1: Fetch Live Data ---
+        # Fetch live data
         ticker_obj = yf.Ticker(ticker_str)
         
-        # Try to get info (this often fails first if blocked)
         try:
             company_name = ticker_obj.info.get('longName', ticker_str)
         except:
             company_name = ticker_str
 
         hist_chart = ticker_obj.history(period='1y')
-        
-        # If Yahoo gives us nothing, RAISE ERROR to trigger the fallback
         if hist_chart.empty:
-            raise ValueError("Empty data returned from Yahoo Finance (Rate Limit)")
+            # Fallback
+            hist_chart = ticker_obj.history(period='2y')
+            if hist_chart.empty:
+                 raise ValueError("Empty data returned from Yahoo Finance")
+            hist_chart = hist_chart.iloc[-252:]
 
-        # ... If we get here, data is good! Process normally ...
+        # --- NEW: Get Live Current Price ---
+        current_price = round(hist_chart['Close'].iloc[-1], 2)
+
         hist_chart.reset_index(inplace=True)
         hist_chart['Date'] = hist_chart['Date'].dt.strftime('%Y-%m-%d')
         chart_data = {'dates': hist_chart['Date'].tolist(), 'prices': hist_chart['Close'].tolist()}
         
+        # Prediction Data
         hist_pred = ticker_obj.history(period='100d')
         model_features = hist_pred[FEATURES]
         
@@ -169,16 +167,13 @@ def predict():
         return jsonify({
             'ticker': ticker_str,
             'companyName': company_name,
+            'currentPrice': current_price,
             'chartData': chart_data,
             'sevenDayForecast': forecast_with_dates
         })
 
     except Exception as e:
-        # --- ATTEMPT 2: Graceful Fallback ---
         print(f"Live fetch failed for {ticker_str}: {e}")
-        print("Switching to Fallback/Demo Mode.")
-        
-        # Return generated data so the UI doesn't crash
         return jsonify(generate_dummy_data(ticker_str))
 
 if __name__ == '__main__':
