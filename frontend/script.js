@@ -8,8 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultContainer = document.getElementById('result-container');
     const chartCtx = document.getElementById('stock-chart').getContext('2d');
     const forecastListEl = document.getElementById('forecast-list');
-    
-    // --- NEW: Current Price Element ---
     const currentPriceEl = document.getElementById('current-price');
 
     let myStockChart = null;
@@ -27,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultContainer.innerHTML = '';
         forecastListEl.innerHTML = ''; 
 
-        // USE YOUR RENDER URL HERE
+        // REPLACE WITH YOUR RENDER URL
         fetch('https://ai-stock-predictor-n85s.onrender.com/api/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -46,8 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardContainer.classList.remove('hidden');
 
             companyNameEl.textContent = data.companyName;
-            
-            // --- NEW: Update Current Price ---
             currentPriceEl.textContent = `$${data.currentPrice.toFixed(2)}`;
             
             data.sevenDayForecast.forEach((forecast, index) => {
@@ -65,19 +61,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 myStockChart.destroy();
             }
             
+            // --- NEW: Chart with 2 Datasets ---
             myStockChart = new Chart(chartCtx, {
                 type: 'line',
                 data: {
                     labels: data.chartData.dates,
-                    datasets: [{
-                        label: 'Close Price (USD)',
-                        data: data.chartData.prices,
-                        borderColor: '#007aff',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        fill: true,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                    }]
+                    datasets: [
+                        {
+                            label: 'Close Price (USD)',
+                            data: data.chartData.prices,
+                            borderColor: '#007aff', // Blue
+                            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'SMA-50 (Trend)',
+                            data: data.chartData.sma50,
+                            borderColor: '#ff9f40', // Orange
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            borderDash: [5, 5] // Dashed Line
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -86,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         x: { ticks: { maxTicksLimit: 8 } },
                         y: { ticks: { callback: value => '$' + value } }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { legend: { display: true } } // Show legend now
                 }
             });
         })

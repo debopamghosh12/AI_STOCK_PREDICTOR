@@ -10,8 +10,7 @@ import datetime
 import requests
 import random
 
-# --- KEY FIX: Force a specific User-Agent globally ---
-# This monkey-patch prevents Yahoo Finance from blocking us as a "bot".
+# --- User-Agent Patch (Keep this!) ---
 old_get = requests.get
 def new_get(*args, **kwargs):
     headers = kwargs.get('headers', {})
@@ -26,7 +25,6 @@ HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
 TARGET_COLUMN_INDEX = 3
 
-# --- App Setup ---
 app = Flask(__name__)
 CORS(app)
 MODEL_DIR = "models"
@@ -65,10 +63,19 @@ def generate_dummy_data(ticker):
         change = random.uniform(-2, 2.1)
         new_price = max(10, prices[-1] + change)
         prices.append(new_price)
-        
-    chart_data = {'dates': dates, 'prices': prices}
     
-    # --- NEW: Current Price for Demo Mode ---
+    # --- NEW: Calculate Dummy SMA-50 ---
+    price_series = pd.Series(prices)
+    sma_50 = price_series.rolling(window=50).mean()
+    # Replace NaN with None for JSON compatibility
+    sma_50_list = sma_50.where(pd.notnull(sma_50), None).tolist()
+
+    chart_data = {
+        'dates': dates, 
+        'prices': prices,
+        'sma50': sma_50_list # <--- Added SMA data
+    }
+    
     current_price = round(prices[-1], 2)
     
     forecast_with_dates = []
@@ -91,7 +98,7 @@ def generate_dummy_data(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V11 - Current Price Added) is running!"
+    return "Stock Price Predictor API (V12 - SMA Feature) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -107,7 +114,6 @@ def predict():
         return jsonify({'error': f'No pre-trained model available for {ticker_str}.'}), 404
 
     try:
-        # Fetch live data
         ticker_obj = yf.Ticker(ticker_str)
         
         try:
@@ -117,20 +123,28 @@ def predict():
 
         hist_chart = ticker_obj.history(period='1y')
         if hist_chart.empty:
-            # Fallback
             hist_chart = ticker_obj.history(period='2y')
             if hist_chart.empty:
                  raise ValueError("Empty data returned from Yahoo Finance")
             hist_chart = hist_chart.iloc[-252:]
 
-        # --- NEW: Get Live Current Price ---
         current_price = round(hist_chart['Close'].iloc[-1], 2)
+
+        # --- NEW: Calculate SMA-50 ---
+        hist_chart['SMA_50'] = hist_chart['Close'].rolling(window=50).mean()
+        # Fill NaN values (first 49 days) with None
+        hist_chart['SMA_50'] = hist_chart['SMA_50'].where(pd.notnull(hist_chart['SMA_50']), None)
 
         hist_chart.reset_index(inplace=True)
         hist_chart['Date'] = hist_chart['Date'].dt.strftime('%Y-%m-%d')
-        chart_data = {'dates': hist_chart['Date'].tolist(), 'prices': hist_chart['Close'].tolist()}
         
-        # Prediction Data
+        chart_data = {
+            'dates': hist_chart['Date'].tolist(), 
+            'prices': hist_chart['Close'].tolist(),
+            'sma50': hist_chart['SMA_50'].tolist() # <--- Added SMA data
+        }
+        
+        # Prediction Data Logic
         hist_pred = ticker_obj.history(period='100d')
         model_features = hist_pred[FEATURES]
         
