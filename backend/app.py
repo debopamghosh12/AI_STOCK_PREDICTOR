@@ -9,8 +9,9 @@ import os
 import datetime
 import requests
 import random
+import math  # <-- Added math module to verify NaNs
 
-# --- User-Agent Patch (Keep this!) ---
+# --- User-Agent Patch ---
 old_get = requests.get
 def new_get(*args, **kwargs):
     headers = kwargs.get('headers', {})
@@ -64,16 +65,16 @@ def generate_dummy_data(ticker):
         new_price = max(10, prices[-1] + change)
         prices.append(new_price)
     
-    # --- NEW: Calculate Dummy SMA-50 ---
+    # --- FIXED: Calculate SMA-50 with NaN handling ---
     price_series = pd.Series(prices)
     sma_50 = price_series.rolling(window=50).mean()
-    # Replace NaN with None for JSON compatibility
-    sma_50_list = sma_50.where(pd.notnull(sma_50), None).tolist()
+    # Bulletproof conversion: NaN -> None
+    sma_50_list = [x if not math.isnan(x) else None for x in sma_50.tolist()]
 
     chart_data = {
         'dates': dates, 
         'prices': prices,
-        'sma50': sma_50_list # <--- Added SMA data
+        'sma50': sma_50_list
     }
     
     current_price = round(prices[-1], 2)
@@ -98,7 +99,7 @@ def generate_dummy_data(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V12 - SMA Feature) is running!"
+    return "Stock Price Predictor API (V13 - NaN Fix) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -130,10 +131,10 @@ def predict():
 
         current_price = round(hist_chart['Close'].iloc[-1], 2)
 
-        # --- NEW: Calculate SMA-50 ---
-        hist_chart['SMA_50'] = hist_chart['Close'].rolling(window=50).mean()
-        # Fill NaN values (first 49 days) with None
-        hist_chart['SMA_50'] = hist_chart['SMA_50'].where(pd.notnull(hist_chart['SMA_50']), None)
+        # --- FIXED: Calculate SMA-50 with NaN handling ---
+        sma_series = hist_chart['Close'].rolling(window=50).mean()
+        # Bulletproof conversion: NaN -> None
+        sma_50_list = [x if not math.isnan(x) else None for x in sma_series.tolist()]
 
         hist_chart.reset_index(inplace=True)
         hist_chart['Date'] = hist_chart['Date'].dt.strftime('%Y-%m-%d')
@@ -141,7 +142,7 @@ def predict():
         chart_data = {
             'dates': hist_chart['Date'].tolist(), 
             'prices': hist_chart['Close'].tolist(),
-            'sma50': hist_chart['SMA_50'].tolist() # <--- Added SMA data
+            'sma50': sma_50_list
         }
         
         # Prediction Data Logic
