@@ -3,8 +3,11 @@ flask-cors
 scikit-learn
 pandas
 numpy
-yfinance
 joblib
 lxml
 tensorflow
-gunicorn   
+gunicorn
+yfinance>=0.2.40
+requests_cache
+requests_ratelimiter
+pyrate_limiter

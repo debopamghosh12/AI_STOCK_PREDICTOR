@@ -6,22 +6,40 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.models import load_model
 import os
-import datetime  
+import datetime
+import requests_cache
+from requests import Session
+from requests_cache import CacheMixin, SQLiteCache
+from requests_ratelimiter import LimiterMixin, MemoryQueueBucket
+from pyrate_limiter import Duration, RequestRate, Limiter
 
+# --- NEW: Advanced Caching & Rate Limiting Setup ---
+class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
+    pass
 
+session = CachedLimiterSession(
+    limiter=Limiter(RequestRate(2, Duration.SECOND*5)),  # Max 2 requests per 5 seconds
+    bucket_class=MemoryQueueBucket,
+    backend=SQLiteCache("yfinance.cache"),
+)
+
+# Trick Yahoo into thinking we are a standard browser
+session.headers['User-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+
+# --- Constants & App Setup (Same as before) ---
 WINDOW_SIZE = 60
 HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
 TARGET_COLUMN_INDEX = 3
-
 
 app = Flask(__name__)
 CORS(app)
 MODEL_DIR = "models"
 loaded_models_cache = {}
 
+# ... [Keep your 'get_model_and_scaler' function exactly the same] ...
 def get_model_and_scaler(ticker):
-    """Dynamically loads a model and its multivariate scaler."""
+    # (Copy your existing code for this function here)
     if ticker in loaded_models_cache:
         return loaded_models_cache[ticker]
     
@@ -35,7 +53,6 @@ def get_model_and_scaler(ticker):
         model = load_model(model_path)
         scaler = joblib.load(scaler_path)
         loaded_models_cache[ticker] = (model, scaler)
-        print(f"Multivariate model and scaler for {ticker} loaded.")
         return model, scaler
     except Exception as e:
         print(f"Error loading model for {ticker}: {e}")
@@ -43,7 +60,7 @@ def get_model_and_scaler(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V5 - Multivariate LSTM) is running!"
+    return "Stock Price Predictor API (V6 - Anti-Rate-Limit) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -59,7 +76,12 @@ def predict():
         return jsonify({'error': f'No pre-trained model available for {ticker_str}.'}), 404
 
     try:
-        ticker_obj = yf.Ticker(ticker_str)
+        # --- MODIFIED: Use the custom session here ---
+        ticker_obj = yf.Ticker(ticker_str, session=session)
+        
+        # Everything else below stays mostly the same, 
+        # but yfinance now uses our "fake browser" session automatically.
+        
         company_name = ticker_obj.info.get('longName', ticker_str)
         
         hist_chart = ticker_obj.history(period='1y')
@@ -76,9 +98,7 @@ def predict():
         if len(model_features) < WINDOW_SIZE:
              return jsonify({'error': 'Not enough historical data to predict.'}), 400
 
-        
         last_known_date = model_features.index[-1].date()
-        
         last_60_days = model_features.iloc[-WINDOW_SIZE:]
         
         scaled_input = scaler.transform(last_60_days)
@@ -91,15 +111,12 @@ def predict():
         seven_day_forecast_prices = unscaled_prediction_array[:, TARGET_COLUMN_INDEX]
         seven_day_forecast_list = seven_day_forecast_prices.tolist()
 
-        
         forecast_dates = []
         current_date = last_known_date
         while len(forecast_dates) < HORIZON_SIZE:
             current_date += datetime.timedelta(days=1)
-            
             if current_date.weekday() < 5: 
                 forecast_dates.append(current_date.strftime('%Y-%m-%d'))
-        
         
         forecast_with_dates = []
         for i in range(HORIZON_SIZE):
@@ -112,12 +129,13 @@ def predict():
             'ticker': ticker_str,
             'companyName': company_name,
             'chartData': chart_data,
-            'sevenDayForecast': forecast_with_dates 
+            'sevenDayForecast': forecast_with_dates
         })
 
     except Exception as e:
-        print(f"Error processing {ticker_str}: {e}")
-        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+        # Print the REAL error to logs so we can see it
+        print(f"FULL ERROR for {ticker_str}: {e}")
+        return jsonify({'error': f'Backend Error: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
