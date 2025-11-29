@@ -9,7 +9,15 @@ import os
 import datetime
 import requests
 import random
-import math  # <-- Added math module to verify NaNs
+import math
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# --- NLTK Setup (Download VADER dictionary) ---
+try:
+    nltk.data.find('sentiment/vader_lexicon.zip')
+except LookupError:
+    nltk.download('vader_lexicon', quiet=True)
 
 # --- User-Agent Patch ---
 old_get = requests.get
@@ -50,8 +58,42 @@ def get_model_and_scaler(ticker):
         print(f"Error loading model for {ticker}: {e}")
         return None, None
 
+# --- NEW: Sentiment Analysis Function ---
+def get_stock_sentiment(ticker):
+    try:
+        ticker_obj = yf.Ticker(ticker)
+        news = ticker_obj.news
+        
+        if not news:
+            return "Neutral", 0.0
+            
+        analyzer = SentimentIntensityAnalyzer()
+        scores = []
+        
+        for article in news:
+            title = article.get('title', '')
+            score = analyzer.polarity_scores(title)['compound']
+            scores.append(score)
+            
+        if not scores:
+            return "Neutral", 0.0
+            
+        avg_score = sum(scores) / len(scores)
+        
+        if avg_score >= 0.05:
+            sentiment = "Bullish" # Positive
+        elif avg_score <= -0.05:
+            sentiment = "Bearish" # Negative
+        else:
+            sentiment = "Neutral"
+            
+        return sentiment, round(avg_score, 2)
+        
+    except Exception as e:
+        print(f"Sentiment error: {e}")
+        return "Neutral", 0.0
+
 def generate_dummy_data(ticker):
-    """Generates realistic demo data if Yahoo blocks us."""
     print(f"⚠️ Yahoo blocked us. Generating demo data for {ticker}...")
     
     end_date = datetime.date.today()
@@ -65,10 +107,8 @@ def generate_dummy_data(ticker):
         new_price = max(10, prices[-1] + change)
         prices.append(new_price)
     
-    # --- FIXED: Calculate SMA-50 with NaN handling ---
     price_series = pd.Series(prices)
     sma_50 = price_series.rolling(window=50).mean()
-    # Bulletproof conversion: NaN -> None
     sma_50_list = [x if not math.isnan(x) else None for x in sma_50.tolist()]
 
     chart_data = {
@@ -93,13 +133,15 @@ def generate_dummy_data(ticker):
         'ticker': ticker,
         'companyName': f"{ticker} (Demo Mode - Live Data Blocked)",
         'currentPrice': current_price,
+        'sentiment': "Neutral", # Fallback sentiment
+        'sentimentScore': 0.0,
         'chartData': chart_data,
         'sevenDayForecast': forecast_with_dates
     }
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V13 - NaN Fix) is running!"
+    return "Stock Price Predictor API (V14 - Sentiment Analysis) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -122,6 +164,9 @@ def predict():
         except:
             company_name = ticker_str
 
+        # --- NEW: Get Sentiment ---
+        sentiment, sentiment_score = get_stock_sentiment(ticker_str)
+
         hist_chart = ticker_obj.history(period='1y')
         if hist_chart.empty:
             hist_chart = ticker_obj.history(period='2y')
@@ -131,9 +176,7 @@ def predict():
 
         current_price = round(hist_chart['Close'].iloc[-1], 2)
 
-        # --- FIXED: Calculate SMA-50 with NaN handling ---
         sma_series = hist_chart['Close'].rolling(window=50).mean()
-        # Bulletproof conversion: NaN -> None
         sma_50_list = [x if not math.isnan(x) else None for x in sma_series.tolist()]
 
         hist_chart.reset_index(inplace=True)
@@ -145,7 +188,6 @@ def predict():
             'sma50': sma_50_list
         }
         
-        # Prediction Data Logic
         hist_pred = ticker_obj.history(period='100d')
         model_features = hist_pred[FEATURES]
         
@@ -183,6 +225,8 @@ def predict():
             'ticker': ticker_str,
             'companyName': company_name,
             'currentPrice': current_price,
+            'sentiment': sentiment,          # <--- Send Sentiment
+            'sentimentScore': sentiment_score, # <--- Send Score
             'chartData': chart_data,
             'sevenDayForecast': forecast_with_dates
         })

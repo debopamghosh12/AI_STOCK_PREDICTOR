@@ -91,7 +91,6 @@ p {
     margin: 0;
 }
 
-/* --- New Current Price Styles --- */
 #price-display {
     font-size: 1.5rem;
     margin-bottom: 1rem;
@@ -162,4 +161,33 @@ p {
 #forecast-list li strong {
     color: #007aff;
     font-weight: 600;
+}
+
+/* --- Sentiment Badge Styles --- */
+#sentiment-section {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+    background-color: #6c757d; /* Default Grey */
+}
+
+.badge-bullish {
+    background-color: #28a745; /* Green */
+}
+
+.badge-bearish {
+    background-color: #dc3545; /* Red */
+}
+
+.badge-neutral {
+    background-color: #6c757d; /* Grey */
 }

@@ -8,32 +8,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultContainer = document.getElementById('result-container');
     const chartCtx = document.getElementById('stock-chart').getContext('2d');
     const forecastListEl = document.getElementById('forecast-list');
+    
+    // --- Sentiment Element ---
+    const sentimentBadgeEl = document.getElementById('sentiment-badge');
 
     let myStockChart = null;
 
     predictButton.addEventListener('click', () => {
         const ticker = tickerInput.value.trim().toUpperCase();
-        console.log("1. Button clicked for:", ticker); // DEBUG LOG
 
         if (!ticker) {
             alert('Please enter a stock ticker.');
             return;
         }
 
-        // Reset UI state
+        // Reset UI
         loader.classList.remove('hidden');
         dashboardContainer.classList.add('hidden');
         resultContainer.innerHTML = '';
-        forecastListEl.innerHTML = ''; 
+        forecastListEl.innerHTML = '';
+        
+        // Reset badge to loading state
+        sentimentBadgeEl.className = 'badge'; 
+        sentimentBadgeEl.textContent = 'Analyzing...';
 
-        // --- IMPORTANT: Verify this URL matches your Render service ---
+        // --- REPLACE WITH YOUR RENDER URL ---
         fetch('https://ai-stock-predictor-n85s.onrender.com/api/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ticker: ticker }),
         })
         .then(response => {
-            console.log("2. Response received. Status:", response.status); // DEBUG LOG
             if (!response.ok) {
                 return response.json().then(err => {
                     throw new Error(err.error || 'Something went wrong');
@@ -42,34 +47,41 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json();
         })
         .then(data => {
-            console.log("3. Data parsed successfully:", data); // DEBUG LOG
-
-            // --- STEP 1: HIDE LOADER & SHOW DASHBOARD ---
             loader.classList.add('hidden');
             dashboardContainer.classList.remove('hidden');
-            console.log("4. Dashboard container should be visible now."); // DEBUG LOG
 
-            // --- STEP 2: UPDATE TEXT FIELDS ---
             companyNameEl.textContent = data.companyName;
             currentPriceEl.textContent = `$${data.currentPrice.toFixed(2)}`;
             
-            // --- STEP 3: BUILD FORECAST LIST ---
-            console.log("5. Building forecast list..."); 
+            // --- Update Sentiment Badge ---
+            const sentiment = data.sentiment; // "Bullish", "Bearish", "Neutral"
+            sentimentBadgeEl.textContent = `${sentiment} (Score: ${data.sentimentScore})`;
+            
+            // Reset classes
+            sentimentBadgeEl.className = 'badge';
+            
+            // Apply color class based on sentiment
+            if (sentiment === 'Bullish') {
+                sentimentBadgeEl.classList.add('badge-bullish');
+            } else if (sentiment === 'Bearish') {
+                sentimentBadgeEl.classList.add('badge-bearish');
+            } else {
+                sentimentBadgeEl.classList.add('badge-neutral');
+            }
+
+            // --- Populate Forecast List ---
             data.sevenDayForecast.forEach((forecast, index) => {
                 const li = document.createElement('li');
                 const daySpan = document.createElement('span');
                 daySpan.textContent = `Day ${index + 1} (${forecast.date}):`;
-                
                 const priceStrong = document.createElement('strong');
                 priceStrong.textContent = `$${forecast.price.toFixed(2)}`;
-                
                 li.appendChild(daySpan);
                 li.appendChild(priceStrong);
                 forecastListEl.appendChild(li);
             });
 
-            // --- STEP 4: DRAW CHART ---
-            console.log("6. Drawing chart..."); 
+            // --- Draw Chart with SMA ---
             if (myStockChart) {
                 myStockChart.destroy();
             }
@@ -109,10 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     plugins: { legend: { display: true } }
                 }
             });
-            console.log("7. Chart drawn successfully."); // DEBUG LOG
         })
         .catch(error => {
-            console.error("ERROR CAUGHT:", error); // DEBUG LOG
             loader.classList.add('hidden');
             dashboardContainer.classList.add('hidden');
             resultContainer.innerHTML = `<p class="result-error">Error: ${error.message}</p>`;
