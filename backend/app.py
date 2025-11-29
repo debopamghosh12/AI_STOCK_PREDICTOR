@@ -10,16 +10,18 @@ import datetime
 import requests
 
 # --- KEY FIX: Force a specific User-Agent globally ---
-# This tells Yahoo we are a specific Chrome browser, avoiding the "Bot" block.
-yf.pdr_override()
+# We monkey-patch the requests library to always send a browser User-Agent.
+# This helps avoid Yahoo Finance's rate limiting/blocking.
 
-# Monkey-patch the requests library to always send this header
 old_get = requests.get
 def new_get(*args, **kwargs):
     headers = kwargs.get('headers', {})
+    # Use a standard Chrome User-Agent
     headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     kwargs['headers'] = headers
     return old_get(*args, **kwargs)
+
+# Apply the patch
 requests.get = new_get
 
 # --- Constants ---
@@ -28,12 +30,14 @@ HORIZON_SIZE = 7
 FEATURES = ['Open', 'High', 'Low', 'Close', 'Volume']
 TARGET_COLUMN_INDEX = 3
 
+# --- App Setup ---
 app = Flask(__name__)
 CORS(app)
 MODEL_DIR = "models"
 loaded_models_cache = {}
 
 def get_model_and_scaler(ticker):
+    """Dynamically loads a model and its multivariate scaler."""
     if ticker in loaded_models_cache:
         return loaded_models_cache[ticker]
     
@@ -54,7 +58,7 @@ def get_model_and_scaler(ticker):
 
 @app.route('/')
 def home():
-    return "Stock Price Predictor API (V8 - User-Agent Patch) is running!"
+    return "Stock Price Predictor API (V9 - Production Fix) is running!"
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -75,21 +79,23 @@ def predict():
         
         company_name = ticker_obj.info.get('longName', ticker_str)
         
-        # Get 1 year of data
+        # Get 1 year of data for the chart
+        # We try '1y' first, but if Yahoo is being strict, we sometimes grab '2y' and slice it
         hist_chart = ticker_obj.history(period='1y')
+        
         if hist_chart.empty:
-            # If 1y fails, try fetching max and slicing
+            # Fallback attempt
             hist_chart = ticker_obj.history(period='2y')
             if hist_chart.empty:
-                return jsonify({'error': 'Yahoo Finance blocked the request (Rate Limit). Please try again in 1 minute.'}), 429
+                return jsonify({'error': 'Yahoo Finance blocked the request or no data found. Please try again in 1 minute.'}), 429
             hist_chart = hist_chart.iloc[-252:] # Approx 1 year
 
         hist_chart.reset_index(inplace=True)
         hist_chart['Date'] = hist_chart['Date'].dt.strftime('%Y-%m-%d')
         chart_data = {'dates': hist_chart['Date'].tolist(), 'prices': hist_chart['Close'].tolist()}
         
-        # Get data for prediction
-        # We reuse the data we just fetched if possible to save requests
+        # Get data for prediction (we need the last 60 days of valid data)
+        # We use the data we already fetched to avoid making a second request to Yahoo
         model_features = hist_chart[FEATURES]
         
         if len(model_features) < WINDOW_SIZE:
@@ -98,6 +104,7 @@ def predict():
         last_known_date = model_features.index[-1].date()
         last_60_days = model_features.iloc[-WINDOW_SIZE:]
         
+        # Scale, Predict, Inverse Transform
         scaled_input = scaler.transform(last_60_days)
         input_data = np.reshape(scaled_input, (1, WINDOW_SIZE, len(FEATURES)))
         scaled_prediction = model.predict(input_data)
@@ -108,10 +115,12 @@ def predict():
         seven_day_forecast_prices = unscaled_prediction_array[:, TARGET_COLUMN_INDEX]
         seven_day_forecast_list = seven_day_forecast_prices.tolist()
 
+        # Calculate Dates
         forecast_dates = []
         current_date = last_known_date
         while len(forecast_dates) < HORIZON_SIZE:
             current_date += datetime.timedelta(days=1)
+            # 5 = Saturday, 6 = Sunday
             if current_date.weekday() < 5: 
                 forecast_dates.append(current_date.strftime('%Y-%m-%d'))
         
