@@ -11,4 +11,4 @@ yfinance>=0.2.40
 requests_cache
 requests_ratelimiter
 pyrate_limiter
-nltk   <-- ADD THIS!
+nltk   
